@@ -10,6 +10,7 @@ import TeacherLogin from "./pages/TeacherLogin";
 import ApprovalStatus from "./pages/ApprovalStatus";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import AdminLogin from "./pages/AdminLogin";
 import AdminApprovals from "./pages/AdminApprovals";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/approval-status" element={<ApprovalStatus />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/teacher/analytics" element={<AnalyticsDashboard />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/approvals" element={<AdminApprovals />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

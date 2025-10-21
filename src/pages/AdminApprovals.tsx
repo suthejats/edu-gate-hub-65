@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Mail } from "lucide-react";
+import { CheckCircle, XCircle, Mail, LogOut } from "lucide-react";
 
 interface Institution {
   id: string;
@@ -19,13 +20,32 @@ interface Institution {
 }
 
 const AdminApprovals = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    checkAdminAccess();
     fetchPendingInstitutions();
   }, []);
+
+  const checkAdminAccess = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user || user.email !== "suthejats@gmail.com") {
+      toast({
+        title: "Access Denied",
+        description: "Only admin can access this page",
+        variant: "destructive",
+      });
+      navigate("/");
+      return;
+    }
+    
+    setIsAdmin(true);
+  };
 
   const fetchPendingInstitutions = async () => {
     const { data, error } = await supabase
@@ -68,16 +88,37 @@ const AdminApprovals = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  if (!isAdmin) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="glass-panel rounded-2xl p-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Admin Approval Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Review and approve pending institution registrations
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Admin Approval Dashboard
+              </h1>
+              <p className="text-muted-foreground">
+                Review and approve pending institution registrations
+              </p>
+            </div>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="glass-panel hover:bg-destructive/20"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {institutions.length === 0 ? (

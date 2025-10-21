@@ -46,6 +46,17 @@ const Welcome = () => {
             </Button>
           </div>
         </div>
+
+        <div className="text-center mt-8">
+          <Button
+            onClick={() => navigate("/admin/login")}
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-accent"
+          >
+            Admin Access
+          </Button>
+        </div>
       </div>
     </div>
   );
