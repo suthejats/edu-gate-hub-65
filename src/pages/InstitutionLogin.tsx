@@ -200,6 +200,19 @@ const InstitutionLogin = () => {
               Forgot Password?
             </button>
           </form>
+
+          <div className="pt-4 border-t border-border">
+            <p className="text-center text-sm text-muted-foreground mb-3">
+              Don't have an institution code yet?
+            </p>
+            <Button
+              onClick={() => navigate("/institution/register")}
+              variant="outline"
+              className="w-full h-12 glass-panel hover:bg-secondary"
+            >
+              Register New Institution
+            </Button>
+          </div>
         </div>
       </div>
     </div>

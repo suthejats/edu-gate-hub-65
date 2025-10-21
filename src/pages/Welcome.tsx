@@ -32,6 +32,19 @@ const Welcome = () => {
           >
             Institution Login
           </Button>
+
+          <div className="text-center pt-4">
+            <p className="text-sm text-muted-foreground mb-2">
+              New institution?
+            </p>
+            <Button
+              onClick={() => navigate("/institution/register")}
+              variant="link"
+              className="text-accent hover:text-accent/80"
+            >
+              Register Here →
+            </Button>
+          </div>
         </div>
       </div>
     </div>
