@@ -4,7 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, db, storage } from "@/integrations/firebase/client";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { collection, addDoc, doc, setDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 
 const InstitutionRegister = () => {
@@ -64,31 +67,12 @@ const InstitutionRegister = () => {
     setLoading(true);
     
     try {
-      // Generate institution code
-      const { data: codeData } = await supabase.rpc('generate_institution_code');
-      const institutionCode = codeData as string;
+      // Generate institution code (simple random code for now)
+      const institutionCode = `INST${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            institution_code: institutionCode,
-            institution_name: formData.institutionName,
-          }
-        }
-      });
-
-      if (authError) {
-        toast({
-          title: "Error",
-          description: authError.message,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
 
       let logoUrl = null;
 
@@ -96,58 +80,35 @@ const InstitutionRegister = () => {
       if (formData.logo) {
         const fileExt = formData.logo.name.split('.').pop();
         const fileName = `${institutionCode}-logo.${fileExt}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('institution-logos')
-          .upload(fileName, formData.logo);
-
-        if (uploadError) {
-          toast({
-            title: "Warning",
-            description: "Logo upload failed, but registration will continue",
-            variant: "default",
-          });
-        } else {
-          logoUrl = supabase.storage.from('institution-logos').getPublicUrl(fileName).data.publicUrl;
-        }
+        const storageRef = ref(storage, `institution-logos/${fileName}`);
+        await uploadBytes(storageRef, formData.logo);
+        logoUrl = await getDownloadURL(storageRef);
       }
 
-      // Insert into institutions table
-      const { error: instError } = await supabase
-        .from("institutions")
-        .insert({
-          institution_name: formData.institutionName,
-          email: formData.email,
-          institution_code: institutionCode,
-          contact_number: formData.contactNumber,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode,
-          password_hash: "hashed", // Password is handled by Supabase Auth
-          status: "pending",
-          logo_url: logoUrl,
-        });
-
-      if (instError) {
-        toast({
-          title: "Error",
-          description: instError.message,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
+      // Insert into institutions collection
+      await addDoc(collection(db, "institutions"), {
+        name: formData.institutionName,
+        code: institutionCode,
+        email: formData.email,
+        contact_number: formData.contactNumber,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        status: "pending",
+        logo_url: logoUrl,
+        created_at: new Date(),
+      });
 
       // Create profile
-      if (authData.user) {
-        await supabase.from("profiles").insert({
-          user_id: authData.user.id,
-          email: formData.email,
-          full_name: formData.institutionName,
-          role: "institution",
-          institution_code: institutionCode,
-        });
-      }
+      await setDoc(doc(db, "profiles", user.uid), {
+        user_id: user.uid,
+        email: formData.email,
+        full_name: formData.institutionName,
+        role: "institution",
+        institution_code: institutionCode,
+        created_at: new Date(),
+      });
 
       toast({
         title: "Success",
