@@ -79,6 +79,16 @@ CREATE POLICY "Institutions can update their own data"
   ON public.institutions FOR UPDATE
   USING (email = (SELECT email FROM auth.users WHERE id = auth.uid()));
 
+CREATE POLICY "Admin can update all institutions"
+  ON public.institutions FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE user_id = auth.uid() AND role = 'admin'
+    ) OR
+    auth.role() = 'anon'
+  );
+
 -- RLS Policies for profiles
 CREATE POLICY "Users can view their own profile"
   ON public.profiles FOR SELECT
@@ -158,3 +168,11 @@ CREATE TRIGGER update_exams_updated_at
   BEFORE UPDATE ON public.exams
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to update institution status (bypasses RLS for admin operations)
+CREATE OR REPLACE FUNCTION update_institution_status(institution_id UUID, new_status approval_status)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE institutions SET status = new_status WHERE id = institution_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

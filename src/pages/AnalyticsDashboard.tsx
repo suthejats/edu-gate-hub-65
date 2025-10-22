@@ -47,8 +47,8 @@ const AnalyticsDashboard = () => {
 
   const distributionData = [
     { name: "Grade A", value: 30, color: "#10b981" },
-    { name: "Grade B", value: 45, color: "#f59e0b" },
-    { name: "Grade C", value: 25, color: "#3b82f6" },
+    { name: "Grade B", value: 45, color: "#ffe066" },
+    { name: "Grade C", value: 25, color: "#258aff" },
   ];
 
   const topStudents = [
@@ -100,7 +100,7 @@ const AnalyticsDashboard = () => {
           </div>
 
           <div className="flex gap-4 mt-6">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button className="bg-yellow-500 text-black hover:bg-yellow-600">
               All Classes
             </Button>
             <Button variant="outline" className="glass-panel hover:bg-secondary">
@@ -114,15 +114,15 @@ const AnalyticsDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-3 gap-4">
-          <div className="glass-panel rounded-2xl p-6 text-center">
+          <div className="glass-panel rounded-2xl p-6 text-center border-2 border-yellow-500">
             <p className="text-sm text-muted-foreground mb-2">Total Students</p>
             <p className="text-4xl font-bold text-accent">{totalStudents}</p>
           </div>
-          <div className="glass-panel rounded-2xl p-6 text-center">
+          <div className="glass-panel rounded-2xl p-6 text-center border-2 border-yellow-500">
             <p className="text-sm text-muted-foreground mb-2">Average Score</p>
             <p className="text-4xl font-bold text-accent">{avgScore}%</p>
           </div>
-          <div className="glass-panel rounded-2xl p-6 text-center">
+          <div className="glass-panel rounded-2xl p-6 text-center border-2 border-yellow-500">
             <p className="text-sm text-muted-foreground mb-2">Avg Attendance</p>
             <p className="text-4xl font-bold text-accent">{avgAttendance}%</p>
           </div>
@@ -146,7 +146,7 @@ const AnalyticsDashboard = () => {
                     borderRadius: "8px",
                   }}
                 />
-                <Bar dataKey="score" fill="#f59e0b" />
+                <Bar dataKey="score" fill="#ffe066" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -167,7 +167,7 @@ const AnalyticsDashboard = () => {
                     borderRadius: "8px",
                   }}
                 />
-                <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} />
+                <Line type="monotone" dataKey="score" stroke="#258aff" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -260,7 +260,7 @@ const AnalyticsDashboard = () => {
                     className="flex justify-between items-center p-3 glass-input rounded-lg"
                   >
                     <span className="text-sm text-foreground">{exam.title}</span>
-                    <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">
+                    <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded-full">
                       {exam.date}
                     </span>
                   </div>
@@ -293,7 +293,7 @@ const AnalyticsDashboard = () => {
                 {attendanceAlerts.map((alert, index) => (
                   <li key={index} className="text-sm">
                     <span className="text-foreground">• {alert.name}</span>
-                    <span className="text-destructive ml-2">— {alert.attendance}</span>
+                    <span className="text-yellow-500 ml-2">— {alert.attendance}</span>
                   </li>
                 ))}
               </ul>

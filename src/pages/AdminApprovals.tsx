@@ -32,9 +32,12 @@ const AdminApprovals = () => {
   }, []);
 
   const checkAdminAccess = async () => {
+    const adminFlag = localStorage.getItem('admin');
     const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user || user.email !== "suthejats@gmail.com") {
+
+    if (adminFlag === 'true' || (user && user.email === "suthejats@gmail.com")) {
+      setIsAdmin(true);
+    } else {
       toast({
         title: "Access Denied",
         description: "Only admin can access this page",
@@ -43,8 +46,6 @@ const AdminApprovals = () => {
       navigate("/");
       return;
     }
-    
-    setIsAdmin(true);
   };
 
   const fetchPendingInstitutions = async () => {
@@ -57,16 +58,31 @@ const AdminApprovals = () => {
     if (data) setInstitutions(data);
   };
 
-  const handleApproval = async (id: string, institutionCode: string, email: string, status: "approved" | "rejected") => {
+  const handleApproval = async (id: string, institutionCode: string, email: string, status: "approved" | "rejected" = "approved") => {
     setLoading(true);
-    
-    try {
-      const { error } = await supabase
-        .from("institutions")
-        .update({ status })
-        .eq("id", id);
 
-      if (error) throw error;
+    try {
+      // Use Supabase client with admin privileges for localStorage admin
+      const adminFlag = localStorage.getItem('admin');
+      let updateResult;
+
+      if (adminFlag === 'true') {
+        // For localStorage admin, use direct SQL update via RPC
+        updateResult = await supabase.rpc('update_institution_status', {
+          institution_id: id,
+          new_status: status
+        });
+      } else {
+        // For authenticated admin, use regular update
+        updateResult = await supabase
+          .from('institutions')
+          .update({ status })
+          .eq('id', id);
+      }
+
+      if (updateResult.error) {
+        throw updateResult.error;
+      }
 
       toast({
         title: "Success",
@@ -78,6 +94,7 @@ const AdminApprovals = () => {
 
       fetchPendingInstitutions();
     } catch (error) {
+      console.error('Approval error:', error);
       toast({
         title: "Error",
         description: "Failed to update status",
@@ -89,6 +106,7 @@ const AdminApprovals = () => {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem('admin');
     await supabase.auth.signOut();
     navigate("/");
   };
@@ -184,7 +202,7 @@ const AdminApprovals = () => {
                       )
                     }
                     disabled={loading}
-                    className="flex-1 bg-success text-success-foreground hover:bg-success/90"
+                    className="flex-1 bg-yellow-500 text-black hover:bg-yellow-600"
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Approve
@@ -208,6 +226,7 @@ const AdminApprovals = () => {
                   <Button
                     variant="outline"
                     className="glass-panel hover:bg-secondary"
+                    title="Send email notification"
                     onClick={() => {
                       toast({
                         title: "Email Notification",

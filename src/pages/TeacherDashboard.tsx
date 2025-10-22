@@ -189,7 +189,7 @@ const TeacherDashboard = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="examTitle">Exam Title *</Label>
+                <Label htmlFor="examTitle">Exam Title</Label>
                 <Input
                   id="examTitle"
                   placeholder="Enter exam title"
@@ -203,7 +203,7 @@ const TeacherDashboard = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="subjectClass">Subject / Class / Section *</Label>
+                <Label htmlFor="subjectClass">Subject / Class / Section</Label>
                 <Input
                   id="subjectClass"
                   placeholder="e.g., Mathematics - Class 10A"
@@ -218,7 +218,7 @@ const TeacherDashboard = () => {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="examDateTime">Exam Date & Time *</Label>
+                  <Label htmlFor="examDateTime">Exam Date & Time</Label>
                   <Input
                     id="examDateTime"
                     type="datetime-local"
@@ -232,7 +232,7 @@ const TeacherDashboard = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration *</Label>
+                  <Label htmlFor="duration">Duration</Label>
                   <Input
                     id="duration"
                     placeholder="e.g., 120 minutes or 2 hours"
@@ -247,13 +247,13 @@ const TeacherDashboard = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="file">Upload Question Paper (PDF or DOC) *</Label>
+                <Label htmlFor="file">Upload Question Paper (PDF or DOC)</Label>
                 <div className="relative">
                   <Input
                     id="file"
                     type="file"
                     accept=".pdf,.doc,.docx"
-                    className="glass-input h-11 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent file:text-accent-foreground file:font-semibold hover:file:bg-accent/90"
+                    className="glass-input h-11 cursor-pointer bg-green-900 border-green-700 text-green-100 file:bg-green-800 file:text-green-100 file:border-green-600 file:rounded file:px-3 file:py-1 file:mr-3 file:font-medium hover:file:bg-green-700"
                     onChange={handleFileChange}
                     required
                   />
@@ -266,7 +266,7 @@ const TeacherDashboard = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 text-base bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                className="w-full h-11 text-base bg-yellow-500 text-black hover:bg-yellow-600 font-semibold"
               >
                 {loading ? "Submitting..." : "Submit for Approval"}
               </Button>
@@ -284,7 +284,7 @@ const TeacherDashboard = () => {
 
             {exams.length === 0 ? (
               <div className="flex items-center justify-center h-64 text-muted-foreground">
-                <p>📋 No exams yet — create your first one using the form on the left.</p>
+                <p>No exams yet — create your first one using the form on the left.</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-[500px] overflow-y-auto">

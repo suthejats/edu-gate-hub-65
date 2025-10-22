@@ -36,11 +36,21 @@ const InstitutionLogin = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Check for default institution credentials
+    if (formData.email === "suthejats@gmail.com" && formData.password === "12345" && formData.institutionCode === "INST40445") {
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+      navigate("/teacher/dashboard");
+      return;
+    }
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
-    
+
     try {
       // Check if institution exists and is approved
       const { data: institution, error: instError } = await supabase
@@ -66,11 +76,11 @@ const InstitutionLogin = () => {
           description: "Your institution is awaiting approval",
           variant: "destructive",
         });
-        navigate("/approval-status", { 
-          state: { 
+        navigate("/approval-status", {
+          state: {
             institutionCode: formData.institutionCode,
-            status: institution.status 
-          } 
+            status: institution.status
+          }
         });
         setLoading(false);
         return;
@@ -96,7 +106,7 @@ const InstitutionLogin = () => {
         title: "Success",
         description: "Logged in successfully",
       });
-      
+
       navigate("/teacher/dashboard");
     } catch (error) {
       toast({
@@ -186,7 +196,7 @@ const InstitutionLogin = () => {
 
             <Button
               type="submit"
-              className="w-full h-12 text-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+              className="w-full h-12 text-lg bg-yellow-500 text-black hover:bg-yellow-600 font-semibold"
               disabled={loading}
             >
               {loading ? "Logging in..." : "Login"}

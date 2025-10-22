@@ -22,6 +22,7 @@ const InstitutionRegister = () => {
     pincode: "",
     password: "",
     confirmPassword: "",
+    logo: null as File | null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -89,6 +90,27 @@ const InstitutionRegister = () => {
         return;
       }
 
+      let logoUrl = null;
+
+      // Upload logo if provided
+      if (formData.logo) {
+        const fileExt = formData.logo.name.split('.').pop();
+        const fileName = `${institutionCode}-logo.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('institution-logos')
+          .upload(fileName, formData.logo);
+
+        if (uploadError) {
+          toast({
+            title: "Warning",
+            description: "Logo upload failed, but registration will continue",
+            variant: "default",
+          });
+        } else {
+          logoUrl = supabase.storage.from('institution-logos').getPublicUrl(fileName).data.publicUrl;
+        }
+      }
+
       // Insert into institutions table
       const { error: instError } = await supabase
         .from("institutions")
@@ -103,6 +125,7 @@ const InstitutionRegister = () => {
           pincode: formData.pincode,
           password_hash: "hashed", // Password is handled by Supabase Auth
           status: "pending",
+          logo_url: logoUrl,
         });
 
       if (instError) {
@@ -167,7 +190,7 @@ const InstitutionRegister = () => {
               step >= 2 ? "bg-accent" : "bg-muted"
             }`} />
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-              step >= 2 ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+              step >= 2 ? "bg-yellow-500 text-black" : "bg-muted text-muted-foreground"
             }`}>
               2
             </div>
@@ -189,7 +212,7 @@ const InstitutionRegister = () => {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="institutionName">Institution Name *</Label>
+                  <Label htmlFor="institutionName">Institution Name</Label>
                   <Input
                     id="institutionName"
                     placeholder="Enter institution name"
@@ -206,7 +229,7 @@ const InstitutionRegister = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -225,7 +248,7 @@ const InstitutionRegister = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contactNumber">Contact Number *</Label>
+                <Label htmlFor="contactNumber">Contact Number</Label>
                 <Input
                   id="contactNumber"
                   type="tel"
@@ -243,7 +266,7 @@ const InstitutionRegister = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Address *</Label>
+                <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
                   placeholder="Enter address"
@@ -259,9 +282,26 @@ const InstitutionRegister = () => {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="logo">Institution Logo</Label>
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/*"
+                  className="glass-input h-12 bg-green-900 border-green-700 text-green-100 file:bg-green-800 file:text-green-100 file:border-green-600 file:rounded file:px-3 file:py-1 file:mr-3 file:font-medium hover:file:bg-green-700"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setFormData({ ...formData, logo: file });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Optional: Upload your institution's logo (PNG, JPG, JPEG)
+                </p>
+              </div>
+
               <Button
                 onClick={handleNext}
-                className="w-full h-12 text-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                className="w-full h-12 text-lg bg-yellow-500 text-black hover:bg-yellow-600 font-semibold"
               >
                 Next
               </Button>
@@ -276,7 +316,7 @@ const InstitutionRegister = () => {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
+                  <Label htmlFor="city">City</Label>
                   <Input
                     id="city"
                     placeholder="tumkur"
@@ -293,7 +333,7 @@ const InstitutionRegister = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="state">State *</Label>
+                  <Label htmlFor="state">State</Label>
                   <Input
                     id="state"
                     placeholder="karnataka"
@@ -311,7 +351,7 @@ const InstitutionRegister = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="pincode">Pincode *</Label>
+                <Label htmlFor="pincode">Pincode</Label>
                 <Input
                   id="pincode"
                   placeholder="560057"
@@ -328,7 +368,7 @@ const InstitutionRegister = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -346,7 +386,7 @@ const InstitutionRegister = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -375,7 +415,7 @@ const InstitutionRegister = () => {
                 <Button
                   onClick={handleRegister}
                   disabled={loading}
-                  className="flex-1 h-12 text-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                  className="flex-1 h-12 text-lg bg-yellow-500 text-black hover:bg-yellow-600 font-semibold"
                 >
                   {loading ? "Registering..." : "Register Institution"}
                 </Button>

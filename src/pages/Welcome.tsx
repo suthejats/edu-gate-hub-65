@@ -28,7 +28,7 @@ const Welcome = () => {
           
           <Button
             onClick={() => navigate("/institution/login")}
-            className="w-full h-14 text-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+            className="w-full h-14 text-lg bg-yellow-500 text-black hover:bg-yellow-600 font-semibold"
           >
             Institution Login
           </Button>

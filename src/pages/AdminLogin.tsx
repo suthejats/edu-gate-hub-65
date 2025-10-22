@@ -19,61 +19,72 @@ const AdminLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check if email is the admin email
-    if (formData.email !== "suthejats@gmail.com") {
-      toast({
-        title: "Access Denied",
-        description: "Only admin can access this page",
-        variant: "destructive"
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      const {
-        data,
-        error
-      } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
-      });
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Invalid credentials",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Create or update admin profile
-      if (data.user) {
-        const {
-          data: existingProfile
-        } = await supabase.from("profiles").select("*").eq("user_id", data.user.id).single();
-        if (!existingProfile) {
-          await supabase.from("profiles").insert({
-            user_id: data.user.id,
-            email: formData.email,
-            full_name: "Admin",
-            role: "admin"
-          });
-        }
-      }
+    // Check for default admin credentials
+    if (formData.email === "suthejats27@gmail.com" && formData.password === "23456") {
+      localStorage.setItem('admin', 'true');
       toast({
         title: "Success",
         description: "Logged in as admin"
       });
       navigate("/admin/approvals");
-    } catch (error) {
+      return;
+    }
+
+    // Check if email is the admin email for Supabase auth
+    if (formData.email === "suthejats@gmail.com") {
+      setLoading(true);
+      try {
+        const {
+          data,
+          error
+        } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        });
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Invalid credentials",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Create or update admin profile
+        if (data.user) {
+          const {
+            data: existingProfile
+          } = await supabase.from("profiles").select("*").eq("user_id", data.user.id).single();
+          if (!existingProfile) {
+            await supabase.from("profiles").insert({
+              user_id: data.user.id,
+              email: formData.email,
+              full_name: "Admin",
+              role: "admin"
+            });
+          }
+        }
+        toast({
+          title: "Success",
+          description: "Logged in as admin"
+        });
+        navigate("/admin/approvals");
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "An error occurred during login",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    } else {
       toast({
-        title: "Error",
-        description: "An error occurred during login",
+        title: "Access Denied",
+        description: "Only admin can access this page",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
   return <div className="flex min-h-screen items-center justify-center p-4">
@@ -81,7 +92,7 @@ const AdminLogin = () => {
         <div className="glass-panel rounded-2xl p-8 space-y-6">
           <div className="flex flex-col items-center gap-4">
             
-            <h1 className="text-3xl font-bold text-center text-foreground">Admin </h1>
+            <h1 className="text-3xl font-bold text-center text-foreground">Admin</h1>
             <p className="text-sm text-muted-foreground text-center">
               Restricted to authorized personnel only
             </p>
@@ -92,7 +103,7 @@ const AdminLogin = () => {
               <Label htmlFor="email" className="text-foreground">
                 Admin Email
               </Label>
-              <Input id="email" type="email" placeholder="suthejats@gmail.com" className="glass-input h-12" value={formData.email} onChange={e => setFormData({
+              <Input id="email" type="email" placeholder="suthejats27@gmail.com" className="glass-input h-12" value={formData.email} onChange={e => setFormData({
               ...formData,
               email: e.target.value
             })} required />
@@ -108,7 +119,7 @@ const AdminLogin = () => {
             })} required />
             </div>
 
-            <Button type="submit" className="w-full h-12 text-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold" disabled={loading}>
+            <Button type="submit" className="w-full h-12 text-lg bg-yellow-500 text-black hover:bg-yellow-600 font-semibold" disabled={loading}>
               {loading ? "Logging in..." : "Access Admin Panel"}
             </Button>
 

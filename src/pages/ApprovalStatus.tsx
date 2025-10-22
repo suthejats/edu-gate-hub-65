@@ -104,7 +104,7 @@ const ApprovalStatus = () => {
             {status === "approved" && (
               <Button
                 onClick={() => navigate("/institution/login")}
-                className="w-full h-12 text-lg bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                className="w-full h-12 text-lg bg-yellow-500 text-black hover:bg-yellow-600 font-semibold"
               >
                 Go to Login
               </Button>
