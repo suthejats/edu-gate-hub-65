@@ -9,35 +9,27 @@ const path = require('path');
 const admin = require('firebase-admin');
 require('dotenv').config();
 
-// Initialize Firebase Admin SDK (commented out for demo - replace with actual credentials)
-let db, bucket;
-try {
-  const serviceAccount = {
-    type: "service_account",
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-    private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    client_id: process.env.FIREBASE_CLIENT_ID,
-    auth_uri: "https://accounts.google.com/o/oauth2/auth",
-    token_uri: "https://oauth2.googleapis.com/token",
-    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-    client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
-  };
+// Initialize Firebase Admin SDK
+const serviceAccount = {
+  type: "service_account",
+  project_id: process.env.FIREBASE_PROJECT_ID,
+  private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+  private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  client_id: process.env.FIREBASE_CLIENT_ID,
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
+};
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-  });
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+});
 
-  db = admin.firestore();
-  bucket = admin.storage().bucket();
-} catch (error) {
-  console.log('Firebase initialization failed, using in-memory storage for demo:', error.message);
-  // Fallback to in-memory storage for demo
-  db = null;
-  bucket = null;
-}
+const db = admin.firestore();
+const bucket = admin.storage().bucket();
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -46,10 +38,7 @@ const PORT = process.env.PORT || 3002;
 app.use(cors());
 app.use(express.json());
 
-// In-memory storage for demo purposes (replace with actual database)
-let institutions = [];
-let exams = [];
-let profiles = [];
+// Firebase is now the primary database
 
 // File storage directory
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -103,6 +92,28 @@ const authenticateTeacher = async (req, res, next) => {
   }
 };
 
+// Admin authentication middleware
+const authenticateAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+
+    const token = authHeader.substring(7);
+    // For demo purposes, accept admin token
+    // In production, verify JWT token and check admin role
+    if (token === 'admin-token-123') {
+      req.admin = { id: 'admin-1', email: 'admin@edugate.com', role: 'admin' };
+      next();
+    } else {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Admin authentication failed' });
+  }
+};
+
 // Validation schemas
 const examCreateSchema = Joi.object({
   examTitle: Joi.string().required().min(1).max(255),
@@ -117,6 +128,74 @@ const institutionRegisterSchema = Joi.object({
   contact: Joi.string().required().min(10).max(15),
   address: Joi.string().required().min(10).max(500)
 });
+
+// Email utility functions
+const sendInstitutionCodeEmail = async (email, institutionCode, institutionName) => {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: 'Your EduGate Institution Registration Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Welcome to EduGate Hub!</h2>
+          <p>Dear ${institutionName},</p>
+          <p>Your institution has been successfully registered on the EduGate platform.</p>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #007bff;">Your Institution Code:</h3>
+            <p style="font-size: 24px; font-weight: bold; color: #28a745; letter-spacing: 2px;">${institutionCode}</p>
+          </div>
+          <p>Please keep this code safe as it will be required for teacher registrations and other administrative purposes.</p>
+          <p>If you have any questions, please contact our support team.</p>
+          <br>
+          <p>Best regards,<br>EduGate Hub Team</p>
+        </div>
+      `
+    };
+
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`Institution code email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send institution code email:', error);
+    return false;
+  }
+};
+
+const sendApprovalNotificationEmail = async (email, institutionName, status, institutionCode = null) => {
+  try {
+    const statusText = status === 'approved' ? 'Approved' : 'Rejected';
+    const statusColor = status === 'approved' ? '#28a745' : '#dc3545';
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: `EduGate Institution Registration ${statusText}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: ${statusColor};">Institution Registration ${statusText}</h2>
+          <p>Dear ${institutionName},</p>
+          ${status === 'approved'
+            ? `<p>Congratulations! Your institution registration has been <strong style="color: ${statusColor};">APPROVED</strong>.</p>
+               <p>Your institution code is: <strong style="font-size: 18px; color: #007bff;">${institutionCode}</strong></p>
+               <p>You can now proceed with teacher registrations and other administrative activities.</p>`
+            : `<p>We regret to inform you that your institution registration has been <strong style="color: ${statusColor};">REJECTED</strong>.</p>
+               <p>Please contact our support team for more information about the rejection reasons.</p>`
+          }
+          <br>
+          <p>Best regards,<br>EduGate Hub Admin Team</p>
+        </div>
+      `
+    };
+
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`Approval notification email sent to ${email} for ${status}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send approval notification email:', error);
+    return false;
+  }
+};
 
 // Routes
 
@@ -169,8 +248,15 @@ app.post('/institution/register', async (req, res) => {
       institutions.push(institution);
     }
 
-    // Send email with institution code (simplified for demo)
-    console.log(`Institution Code for ${email}: ${institutionCode}`);
+    // Send email with institution code
+    const emailSent = await sendInstitutionCodeEmail(email, institutionCode, name);
+    const message = emailSent
+      ? 'Institution registered successfully. Check your email for the institution code.'
+      : 'Institution registered successfully. Check console for institution code (email sending failed).';
+
+    if (!emailSent) {
+      console.log(`Institution Code for ${email}: ${institutionCode}`);
+    }
 
     res.json({
       success: true,
@@ -181,7 +267,7 @@ app.post('/institution/register', async (req, res) => {
         institution_code: institutionCode,
         status: institution.status
       },
-      message: 'Institution registered successfully. Check console for institution code.'
+      message: message
     });
   } catch (error) {
     console.error('Institution registration error:', error);
@@ -311,6 +397,286 @@ app.get('/teacher/exams', authenticateTeacher, async (req, res) => {
   } catch (error) {
     console.error('Fetch exams error:', error);
     res.status(500).json({ error: 'Failed to fetch exams' });
+  }
+});
+
+// Admin API Routes
+
+// GET /admin/institutions/pending - Fetch pending institutions for approval
+app.get('/admin/institutions/pending', authenticateAdmin, async (req, res) => {
+  try {
+    let pendingInstitutions = [];
+
+    if (db) {
+      // Fetch pending institutions from Firestore
+      const institutionsRef = db.collection('institutions');
+      const snapshot = await institutionsRef.where('status', '==', 'pending').orderBy('created_at', 'desc').get();
+
+      snapshot.forEach(doc => {
+        pendingInstitutions.push({ id: doc.id, ...doc.data() });
+      });
+    } else {
+      // Fetch from in-memory storage
+      pendingInstitutions = institutions.filter(inst => inst.status === 'pending');
+      // Sort by created_at descending
+      pendingInstitutions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    res.json({
+      success: true,
+      institutions: pendingInstitutions,
+      count: pendingInstitutions.length
+    });
+  } catch (error) {
+    console.error('Fetch pending institutions error:', error);
+    res.status(500).json({ error: 'Failed to fetch pending institutions' });
+  }
+});
+
+// POST /admin/institutions/:id/approve - Approve institution
+app.post('/admin/institutions/:id/approve', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (db) {
+      // Update institution status in Firestore
+      const institutionsRef = db.collection('institutions');
+      const docRef = institutionsRef.doc(id);
+
+      // Get current institution data
+      const doc = await docRef.get();
+      if (!doc.exists) {
+        return res.status(404).json({ error: 'Institution not found' });
+      }
+
+      const institutionData = doc.data();
+
+      // Update status and add approval metadata
+      await docRef.update({
+        status: 'approved',
+        approved_at: admin.firestore.FieldValue.serverTimestamp(),
+        approved_by: req.admin.id
+      });
+
+      // Send approval notification email
+      await sendApprovalNotificationEmail(
+        institutionData.email,
+        institutionData.name,
+        'approved',
+        institutionData.institution_code
+      );
+
+      // Store notification record
+      const notificationsRef = db.collection('notifications');
+      await notificationsRef.add({
+        type: 'approval',
+        recipient_email: institutionData.email,
+        subject: 'EduGate Institution Registration Approved',
+        message: `Your institution ${institutionData.name} has been approved.`,
+        sent_at: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'sent'
+      });
+
+    } else {
+      // Update in-memory storage
+      const institution = institutions.find(inst => inst.id === id);
+      if (!institution) {
+        return res.status(404).json({ error: 'Institution not found' });
+      }
+
+      institution.status = 'approved';
+      institution.approved_at = new Date().toISOString();
+      institution.approved_by = req.admin.id;
+
+      // Send approval notification email
+      await sendApprovalNotificationEmail(
+        institution.email,
+        institution.name,
+        'approved',
+        institution.institution_code
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Institution approved successfully'
+    });
+  } catch (error) {
+    console.error('Approve institution error:', error);
+    res.status(500).json({ error: 'Failed to approve institution' });
+  }
+});
+
+// POST /admin/institutions/:id/reject - Reject institution
+app.post('/admin/institutions/:id/reject', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (db) {
+      // Update institution status in Firestore
+      const institutionsRef = db.collection('institutions');
+      const docRef = institutionsRef.doc(id);
+
+      // Get current institution data
+      const doc = await docRef.get();
+      if (!doc.exists) {
+        return res.status(404).json({ error: 'Institution not found' });
+      }
+
+      const institutionData = doc.data();
+
+      // Update status and add rejection metadata
+      await docRef.update({
+        status: 'rejected',
+        approved_at: admin.firestore.FieldValue.serverTimestamp(),
+        approved_by: req.admin.id
+      });
+
+      // Send rejection notification email
+      await sendApprovalNotificationEmail(
+        institutionData.email,
+        institutionData.name,
+        'rejected'
+      );
+
+      // Store notification record
+      const notificationsRef = db.collection('notifications');
+      await notificationsRef.add({
+        type: 'rejection',
+        recipient_email: institutionData.email,
+        subject: 'EduGate Institution Registration Rejected',
+        message: `Your institution ${institutionData.name} registration has been rejected.`,
+        sent_at: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'sent'
+      });
+
+    } else {
+      // Update in-memory storage
+      const institution = institutions.find(inst => inst.id === id);
+      if (!institution) {
+        return res.status(404).json({ error: 'Institution not found' });
+      }
+
+      institution.status = 'rejected';
+      institution.approved_at = new Date().toISOString();
+      institution.approved_by = req.admin.id;
+
+      // Send rejection notification email
+      await sendApprovalNotificationEmail(
+        institution.email,
+        institution.name,
+        'rejected'
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Institution rejected successfully'
+    });
+  } catch (error) {
+    console.error('Reject institution error:', error);
+    res.status(500).json({ error: 'Failed to reject institution' });
+  }
+});
+
+// GET /admin/exams/pending - Fetch pending exams for approval
+app.get('/admin/exams/pending', authenticateAdmin, async (req, res) => {
+  try {
+    let pendingExams = [];
+
+    if (db) {
+      // Fetch pending exams from Firestore
+      const examsRef = db.collection('exams');
+      const snapshot = await examsRef.where('status', '==', 'pending').orderBy('created_at', 'desc').get();
+
+      snapshot.forEach(doc => {
+        pendingExams.push({ id: doc.id, ...doc.data() });
+      });
+    } else {
+      // Fetch from in-memory storage
+      pendingExams = exams.filter(exam => exam.status === 'pending');
+      // Sort by created_at descending
+      pendingExams.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    res.json({
+      success: true,
+      exams: pendingExams,
+      count: pendingExams.length
+    });
+  } catch (error) {
+    console.error('Fetch pending exams error:', error);
+    res.status(500).json({ error: 'Failed to fetch pending exams' });
+  }
+});
+
+// POST /admin/exams/:id/approve - Approve exam
+app.post('/admin/exams/:id/approve', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (db) {
+      // Update exam status in Firestore
+      const examsRef = db.collection('exams');
+      await examsRef.doc(id).update({
+        status: 'approved',
+        approved_at: admin.firestore.FieldValue.serverTimestamp(),
+        approved_by: req.admin.id
+      });
+    } else {
+      // Update in-memory storage
+      const exam = exams.find(ex => ex.id === id);
+      if (!exam) {
+        return res.status(404).json({ error: 'Exam not found' });
+      }
+
+      exam.status = 'approved';
+      exam.approved_at = new Date().toISOString();
+      exam.approved_by = req.admin.id;
+    }
+
+    res.json({
+      success: true,
+      message: 'Exam approved successfully'
+    });
+  } catch (error) {
+    console.error('Approve exam error:', error);
+    res.status(500).json({ error: 'Failed to approve exam' });
+  }
+});
+
+// POST /admin/exams/:id/reject - Reject exam
+app.post('/admin/exams/:id/reject', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (db) {
+      // Update exam status in Firestore
+      const examsRef = db.collection('exams');
+      await examsRef.doc(id).update({
+        status: 'rejected',
+        approved_at: admin.firestore.FieldValue.serverTimestamp(),
+        approved_by: req.admin.id
+      });
+    } else {
+      // Update in-memory storage
+      const exam = exams.find(ex => ex.id === id);
+      if (!exam) {
+        return res.status(404).json({ error: 'Exam not found' });
+      }
+
+      exam.status = 'rejected';
+      exam.approved_at = new Date().toISOString();
+      exam.approved_by = req.admin.id;
+    }
+
+    res.json({
+      success: true,
+      message: 'Exam rejected successfully'
+    });
+  } catch (error) {
+    console.error('Reject exam error:', error);
+    res.status(500).json({ error: 'Failed to reject exam' });
   }
 });
 
